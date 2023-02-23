@@ -19,7 +19,7 @@ int compare(const void *a, const void *b)
 
 char *execute_ls(char **arguments, int num_arguments)
 {
-    char *result = malloc(10000);
+    char result[10000] = {};
     // initializing the arguments
     int l_flag = 0;
     int s_flag = 0;
@@ -60,7 +60,7 @@ char *execute_ls(char **arguments, int num_arguments)
     if (dir == NULL)
     {
         perror("Error opening directory");
-        return result;
+        return NULL;
     }
 
     struct dirent *entry[MAX_LINE_LENGTH];
@@ -81,7 +81,7 @@ char *execute_ls(char **arguments, int num_arguments)
                 if (n < 0 || n >= MAX_LINE_LENGTH)
                 {
                     printf("Error: buffer overflow\n");
-                    return result;
+                    return NULL;
                 }
                 struct stat statbuf;
                 stat(path, &statbuf);
@@ -147,7 +147,7 @@ char *execute_ls(char **arguments, int num_arguments)
                 if (n < 0 || n >= MAX_LINE_LENGTH)
                 {
                     printf("Error: buffer overflow\n");
-                    return result;
+                    return NULL;
                 }
                 struct stat statbuf;
                 if (stat(path, &statbuf) == 0)
@@ -181,7 +181,7 @@ char *execute_ls(char **arguments, int num_arguments)
                 if (n < 0 || n >= MAX_LINE_LENGTH)
                 {
                     printf("Error: buffer overflow\n");
-                    return result;
+                    return NULL;
                 }
                 if (access(path, X_OK) == 0)
                 {
@@ -193,13 +193,18 @@ char *execute_ls(char **arguments, int num_arguments)
             printf("\n");
         }
     }
+
+    size_t len = strlen(result);
+    char *ret = malloc((len + 1) * sizeof(char));
+    strcpy(ret, result);
+
     closedir(dir);
-    return result;
+    return ret;
 }
 
 char *execute_tac(char **arguments, int num_arguments)
 {
-    char *result = malloc(10000);
+    char result[10000] = {};
 
     // -b check
     int b_flag = 0;
@@ -257,8 +262,6 @@ char *execute_tac(char **arguments, int num_arguments)
         return NULL;
     }
 
-    printf("%s\n", filename);
-
     // open file
     FILE *in = fopen(input_file, "r");
     if (in == NULL)
@@ -290,6 +293,18 @@ char *execute_tac(char **arguments, int num_arguments)
         while (fgets(line, MAX_LINE_LENGTH, in) != NULL)
         {
             lines[line_count] = strdup(line);
+            size_t line_len = strlen(lines[line_count]);
+
+            if (lines[line_count][line_len - 1] != '\n')
+            {
+                // string_manipulation.exe
+                char temp[line_len + 3];
+                strcpy(temp, lines[line_count]);
+                temp[line_len + 1] = '\0';
+                temp[line_len] = '\n';
+                strcpy(lines[line_count], temp);
+            }
+
             line_count++;
         }
     }
@@ -346,12 +361,16 @@ char *execute_tac(char **arguments, int num_arguments)
             printf("%s", lines[i]);
         }
     }
-    return result;
+    size_t len = strlen(result);
+    char *ret = malloc(len + 1);
+    strcpy(ret, result);
+
+    return ret;
 }
 
 char *execute_dir(char **arguments, int num_arguments)
 {
-    char *result = malloc(10000);
+    char result[10000] = {};
 
     // get dir
     char *directory;
@@ -387,9 +406,13 @@ char *execute_dir(char **arguments, int num_arguments)
             printf("%s\n", entry->d_name);
         }
     }
-
     closedir(dir);
-    return result;
+
+    size_t len = strlen(result);
+    char *ret = malloc(len + 1);
+    strcpy(ret, result);
+
+    return ret;
 }
 
 // checks which command was specified in the terminal
@@ -420,15 +443,13 @@ int main(int argc, char *argv[])
     char line[MAX_LINE_LENGTH];
     char *arguments[MAX_ARGUMENTS];
     int num_arguments;
-    char *last_result = NULL;
+    char *last_result;
 
     int has_pipe = 0;
     char *output_file;
 
     while (1)
     {
-        last_result = NULL;
-
         int pipe_set = 0;
         has_pipe = 0;
         printf("$ ");
@@ -472,7 +493,9 @@ int main(int argc, char *argv[])
             fprintf(file, "%s", last_result);
 
             fclose(file);
-
+        }
+        if (last_result)
+        {
             free(last_result);
         }
     }
